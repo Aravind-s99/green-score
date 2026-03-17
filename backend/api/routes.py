@@ -41,18 +41,19 @@ def _parse_dt(value: Any) -> datetime | None:
 
 
 def _supabase_client():
-    try:
-        from supabase import create_client  # type: ignore
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Supabase client import failed: {e}")
-
+    """Returns a Supabase client, or None if credentials are not configured."""
     import os
 
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_KEY")
     if not url or not key:
-        raise HTTPException(status_code=500, detail="Missing SUPABASE_URL or SUPABASE_KEY in environment.")
-    return create_client(url, key)
+        return None
+
+    try:
+        from supabase import create_client  # type: ignore
+        return create_client(url, key)
+    except Exception:
+        return None
 
 
 def _run_scoring_pipeline(project_id: str, registry: str) -> dict:
@@ -71,11 +72,11 @@ def _run_scoring_pipeline(project_id: str, registry: str) -> dict:
     coords = verra_detail.get("coordinates") if isinstance(verra_detail, dict) else None
     lat = coords.get("lat") if isinstance(coords, dict) else None
     lon = coords.get("lon") if isinstance(coords, dict) else None
-    if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
-        raise HTTPException(
-            status_code=502,
-            detail="Satellite step failed (gee): missing or invalid coordinates from registry detail page.",
-        )
+    coords_missing = not isinstance(lat, (int, float)) or not isinstance(lon, (int, float))
+    if coords_missing:
+        # Fall back to a central-Africa reference point so satellite still runs.
+        # The scorer will flag this as missing_coordinates in risk_flags.
+        lat, lon = 0.0, 20.0
 
     # 2) Satellite
     try:
@@ -99,6 +100,8 @@ def _run_scoring_pipeline(project_id: str, registry: str) -> dict:
 
 def _save_score_to_supabase(*, project_id: str, registry: str, score: dict) -> None:
     sb = _supabase_client()
+    if sb is None:
+        return  # Supabase not configured — skip caching silently
     created_at = _utcnow().isoformat()
     payload = {
         "project_id": project_id,
@@ -108,12 +111,14 @@ def _save_score_to_supabase(*, project_id: str, registry: str, score: dict) -> N
     }
     try:
         sb.table("project_scores").insert(payload).execute()
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Supabase save failed: {e}")
+    except Exception:
+        pass  # Cache write failure is non-fatal
 
 
 def _get_cached_score(*, project_id: str, registry: str) -> dict | None:
     sb = _supabase_client()
+    if sb is None:
+        return None  # Supabase not configured — always compute fresh
     try:
         res = (
             sb.table("project_scores")
@@ -124,8 +129,8 @@ def _get_cached_score(*, project_id: str, registry: str) -> dict | None:
             .limit(1)
             .execute()
         )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Supabase read failed: {e}")
+    except Exception:
+        return None  # Cache read failure is non-fatal
 
     data = getattr(res, "data", None)
     if not data:

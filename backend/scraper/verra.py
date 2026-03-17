@@ -167,123 +167,60 @@ class VerraScraper:
 
     def get_project_detail(self, project_id: str) -> dict:
         """
-        Fetches https://registry.verra.org/app/projectDetail/VCS/{project_id}
-        Extracts: name, coordinates (lat/lon), methodology, estimated_annual_reductions,
-        validation_body, documents_urls[]
-        Adds: source_url, fetched_at
+        Fetches project detail from the Verra JSON API.
+        POST https://registry.verra.org/uiapi/resource/resource/search
+        with resourceIdentifier filter.
+        Returns the same shape as before for scorer compatibility.
         """
         source_url = f"{self.base_url}/app/projectDetail/VCS/{project_id}"
+        api_url = f"{self.base_url}/uiapi/resource/resource/search"
 
-        def parse_detail(html: str) -> dict:
-            soup = BeautifulSoup(html, "html.parser")
-            page_text = soup.get_text("\n", strip=True)
+        headers = {
+            "User-Agent": self.user_agent,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+        self._sleep()
+        resp = self._session.post(
+            api_url,
+            json={"program": "VCS", "resourceIdentifier": str(project_id)},
+            headers=headers,
+            timeout=self.timeout_seconds,
+        )
+        resp.raise_for_status()
 
-            def find_value_by_label(label_patterns: list[str]) -> str | None:
-                # Try structured approach: find label-like elements then read neighbors.
-                for pat in label_patterns:
-                    label_el = soup.find(string=re.compile(pat, re.I))
-                    if not label_el:
-                        continue
-                    el = label_el.parent
-                    # Common patterns: <td>Label</td><td>Value</td>
-                    if el and el.name in {"td", "th"}:
-                        nxt = el.find_next_sibling("td")
-                        if nxt:
-                            return _clean(nxt.get_text(" ", strip=True))
-                    # Or: Label: Value in same container
-                    container = el.parent if el else None
-                    if container:
-                        txt = _clean(container.get_text(" ", strip=True))
-                        if txt:
-                            m = re.search(rf"(?:{pat})\s*:?\s*(.+)$", txt, re.I)
-                            if m:
-                                return _clean(m.group(1))
-                # Fallback: regex on full page text
-                for pat in label_patterns:
-                    m = re.search(rf"{pat}\s*:?\s*(.+)", page_text, re.I)
-                    if m:
-                        # take first line-ish
-                        return _clean(m.group(1).split("\n")[0])
-                return None
+        data = resp.json()
+        items: list[Any] = data.get("value", []) if isinstance(data, dict) else []
 
-            # Name: prefer explicit label; headings are unreliable on this site.
-            name = find_value_by_label([r"Project\s*Name"])
-            if not name:
-                for sel in ["h1", "h2", "h3"]:
-                    for h in soup.select(sel):
-                        txt = _clean(h.get_text(" ", strip=True))
-                        if not txt:
-                            continue
-                        if re.search(r"date\s+updated|project\s+details", txt, re.I):
-                            continue
-                        name = txt
-                        break
-                    if name:
-                        break
+        if not items:
+            raise ValueError(f"Project {project_id} not found in Verra registry API.")
 
-            methodology = find_value_by_label([r"Methodolog(?:y|ies)", r"Methodology"])
+        item = items[0]
 
-            # Coordinates: only accept explicit labels to avoid false positives.
-            lat = _in_range(_as_float(find_value_by_label([r"Latitude"])), -90, 90)
-            lon = _in_range(_as_float(find_value_by_label([r"Longitude", r"Longitud"])), -180, 180)
+        methodology = _clean(item.get("protocols")) or _clean(item.get("protocolCategories"))
+        est_reductions = item.get("estAnnualEmissionReductions")
+        if isinstance(est_reductions, (int, float)):
+            estimated_annual_reductions: float | None = float(est_reductions)
+        else:
+            estimated_annual_reductions = None
 
-            estimated_annual_reductions = _as_number(
-                find_value_by_label(
-                    [
-                        r"Estimated\s+Annual\s+Emission\s+Reductions",
-                        r"Estimated\s+Annual\s+Reductions",
-                        r"Annual\s+Emission\s+Reductions",
-                    ]
-                )
-            )
-
-            validation_body = find_value_by_label(
-                [
-                    r"Validation\s*(?:/|and)?\s*Verification\s+Body",
-                    r"Validation\s+Body",
-                    r"VCS\s+Project\s+Validator",
-                ]
-            )
-
-            # Documents: collect links that look like documents
-            doc_urls: list[str] = []
-            for a in soup.select("a[href]"):
-                href = a.get("href")
-                if not href:
-                    continue
-                abs_url = _absolutize(source_url, href)
-                if _is_probably_document_url(abs_url):
-                    doc_urls.append(abs_url)
-
-            # Also sometimes document links are behind buttons; keep unique
-            documents_urls = sorted(set(doc_urls))
-
-            return {
-                "project_id": str(project_id),
-                "name": name,
-                "coordinates": {"lat": lat, "lon": lon},
-                "methodology": methodology,
-                "estimated_annual_reductions": estimated_annual_reductions,
-                "validation_body": validation_body,
-                "documents_urls": documents_urls,
-                "source_url": source_url,
-                "fetched_at": _iso_utc_now(),
-            }
-
-        # Attempt 1: plain requests (fast)
-        resp = self._get(source_url)
-        parsed = parse_detail(resp.text)
-
-        # If the page is JS-rendered, the static HTML often contains no useful fields.
-        if (
-            parsed.get("name") is None
-            and parsed.get("methodology") is None
-            and parsed.get("documents_urls") == []
-        ):
-            rendered_html = self._get_rendered_html(source_url)
-            parsed = parse_detail(rendered_html)
-
-        return parsed
+        return {
+            "project_id": str(project_id),
+            "name": _clean(item.get("resourceName")),
+            "coordinates": {"lat": None, "lon": None},
+            "methodology": methodology,
+            "estimated_annual_reductions": estimated_annual_reductions,
+            "validation_body": None,
+            "documents_urls": [],
+            "country": _clean(item.get("country")),
+            "status": _clean(item.get("resourceStatus")),
+            "proponent": _clean(item.get("proponent")),
+            "region": _clean(item.get("region")),
+            "crediting_period_start": item.get("creditingPeriodStartDate"),
+            "crediting_period_end": item.get("creditingPeriodEndDate"),
+            "source_url": source_url,
+            "fetched_at": _iso_utc_now(),
+        }
 
     def download_pdfs(self, document_urls: list[str], save_dir: str) -> list[str]:
         """

@@ -119,84 +119,51 @@ class VerraScraper:
 
     def search_projects(self, query: str) -> list[dict]:
         """
-        Fetches https://registry.verra.org/app/search/VCS and parses the project listing table.
+        Calls the Verra JSON API directly.
+        POST https://registry.verra.org/uiapi/resource/resource/search
         Returns list of {project_id, name, country, status, methodology, url}.
         """
-        url = f"{self.base_url}/app/search/VCS"
-        resp = self._get(url)
-        soup = BeautifulSoup(resp.text, "html.parser")
+        api_url = f"{self.base_url}/uiapi/resource/resource/search"
+        q = (query or "").strip()
 
-        q = (query or "").strip().lower()
+        payload: dict[str, Any] = {
+            "program": "VCS",
+            "maxResults": 20,
+        }
+        if q:
+            payload["resourceName"] = q
+
+        headers = {
+            "User-Agent": self.user_agent,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+        self._sleep()
+        resp = self._session.post(api_url, json=payload, headers=headers, timeout=self.timeout_seconds)
+        resp.raise_for_status()
+
+        data = resp.json()
+        items: list[Any] = data.get("value", []) if isinstance(data, dict) else []
 
         results: list[dict[str, Any]] = []
-
-        # The registry UI has changed over time. We try a few table heuristics.
-        tables = soup.select("table")
-        for table in tables:
-            rows = table.select("tbody tr") or table.select("tr")
-            for tr in rows:
-                tds = tr.find_all(["td", "th"])
-                if not tds:
-                    continue
-
-                # Look for a link that likely points to the project detail page.
-                a = tr.find("a", href=True)
-                href = a["href"] if a else None
-                abs_url = _absolutize(url, href) if href else None
-
-                # Try to extract project id from link or first cell text.
-                project_id = None
-                if abs_url:
-                    m = re.search(r"/app/projectDetail/VCS/(\d+)", abs_url)
-                    if m:
-                        project_id = m.group(1)
-                if not project_id:
-                    project_id = _clean(tds[0].get_text(" ", strip=True))
-                    if project_id and not re.fullmatch(r"\d{1,10}", project_id):
-                        project_id = None
-
-                name = _clean(a.get_text(" ", strip=True)) if a else None
-
-                # Heuristic mapping by column count: [id, name, country, status, methodology, ...]
-                # If name isn't link text, try second cell.
-                if not name and len(tds) >= 2:
-                    name = _clean(tds[1].get_text(" ", strip=True))
-                country = _clean(tds[2].get_text(" ", strip=True)) if len(tds) >= 3 else None
-                status = _clean(tds[3].get_text(" ", strip=True)) if len(tds) >= 4 else None
-                methodology = _clean(tds[4].get_text(" ", strip=True)) if len(tds) >= 5 else None
-
-                if not abs_url and project_id:
-                    abs_url = f"{self.base_url}/app/projectDetail/VCS/{project_id}"
-
-                if not project_id or not abs_url:
-                    continue
-
-                row = {
-                    "project_id": project_id,
-                    "name": name,
-                    "country": country,
-                    "status": status,
-                    "methodology": methodology,
-                    "url": abs_url,
-                }
-
-                hay = f"{project_id} {name or ''} {country or ''} {status or ''} {methodology or ''}".lower()
-                if q and q not in hay:
-                    continue
-
-                results.append(row)
-
-        # Deduplicate by project_id (keep first)
         seen: set[str] = set()
-        deduped: list[dict] = []
-        for r in results:
-            pid = r["project_id"]
-            if pid in seen:
+        for item in items[:20]:
+            project_id = str(item.get("resourceIdentifier") or "").strip()
+            if not project_id or project_id in seen:
                 continue
-            seen.add(pid)
-            deduped.append(r)
+            seen.add(project_id)
+            detail_url = f"{self.base_url}/app/projectDetail/VCS/{project_id}"
+            methodology = item.get("protocols") or item.get("protocolCategories")
+            results.append({
+                "project_id": project_id,
+                "name": _clean(item.get("resourceName")),
+                "country": _clean(item.get("country")),
+                "status": _clean(item.get("resourceStatus")),
+                "methodology": _clean(methodology),
+                "url": detail_url,
+            })
 
-        return deduped
+        return results
 
     def get_project_detail(self, project_id: str) -> dict:
         """

@@ -180,6 +180,6 @@ def search_projects(q: str, registry: Literal["verra", "goldstandard"]):
 def featured_projects():
     return {
         "registry": "verra",
-        "project_ids": ["1360", "902", "1478", "844", "2366", "1747"],
+        "project_ids": ["1360", "902", "1478", "844", "2366", "1748"],
     }
 

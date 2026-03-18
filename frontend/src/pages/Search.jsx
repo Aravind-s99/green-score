@@ -14,7 +14,9 @@ function ResultCard({ project }) {
       className="canopy-card"
     >
       <div style={{ padding: '20px' }}>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: '4px' }}>VCS {project.project_id}</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: '4px' }}>
+          {project.project_id}
+        </div>
         <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px', lineHeight: 1.3 }}>
           {project.name ?? 'Untitled Project'}
         </div>
@@ -75,7 +77,7 @@ export default function Search() {
     if (!q.trim()) return
     setLoading(true); setError(null); setSearched(true); setShowSuggestions(false)
     try {
-      const data = await apiJson(`/api/search?q=${encodeURIComponent(q.trim())}&registry=verra`)
+      const data = await apiJson(`/api/search?q=${encodeURIComponent(q.trim())}&registry=${selectedRegistry}`)
       setResults(Array.isArray(data) ? data : [])
     } catch (e) { setError(e.message); setResults([]) }
     finally { setLoading(false) }
@@ -89,7 +91,7 @@ export default function Search() {
     setSuggLoading(true)
     suggTimer.current = setTimeout(async () => {
       try {
-        const data = await apiJson(`/api/search?q=${encodeURIComponent(val.trim())}&registry=verra`)
+        const data = await apiJson(`/api/search?q=${encodeURIComponent(val.trim())}&registry=${selectedRegistry}`)
         setSuggestions(Array.isArray(data) ? data.slice(0, 8) : [])
         setShowSuggestions(true)
       } catch { setSuggestions([]) }
@@ -107,8 +109,9 @@ export default function Search() {
 
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '80px 16px 60px' }}>
+
       <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-        <Link to="/home" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}>← Home</Link>
+        <Link to="/" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}>← Home</Link>
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '26px', color: 'var(--gold)', margin: 0 }}>
           {initialQuery ? `Results for "${initialQuery}"` : 'Search Projects'}
         </h1>
@@ -120,7 +123,6 @@ export default function Search() {
             ref={inputRef}
             value={inputValue}
             onChange={onInputChange}
-            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
             placeholder="Search by name, country, ID or methodology…"
             autoComplete="off"
             style={{
@@ -128,7 +130,10 @@ export default function Search() {
               borderRadius: '8px', padding: '12px 16px', fontSize: '14px',
               color: 'var(--text-primary)', outline: 'none', fontFamily: "'DM Sans', sans-serif",
             }}
-            onFocus={e => { e.target.style.borderColor = '#c9a84c'; if (suggestions.length > 0) setShowSuggestions(true) }}
+            onFocus={e => {
+              e.target.style.borderColor = '#c9a84c'
+              if (suggestions.length > 0) setShowSuggestions(true)
+            }}
             onBlur={e => e.target.style.borderColor = '#c9a84c40'}
           />
           {suggLoading && (
@@ -161,7 +166,9 @@ export default function Search() {
                       {s.methodology && <span style={{ color: 'var(--green-glow)', marginLeft: '8px' }}>{s.methodology}</span>}
                     </div>
                   </div>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>VCS {s.project_id}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                    {s.registry === 'worldbank' ? 'WB' : 'VCS'} {s.project_id}
+                  </span>
                 </button>
               ))}
             </div>
@@ -173,7 +180,7 @@ export default function Search() {
       {loading && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '13px' }}>
           <div style={{ width: '16px', height: '16px', border: '2px solid #c9a84c40', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          Searching Verra registry…
+          Searching Verra VCS Registry…
         </div>
       )}
 
@@ -204,9 +211,17 @@ export default function Search() {
 
       {!searched && !loading && (
         <div style={{ background: 'var(--green-mid)', border: '1px dashed #c9a84c30', borderRadius: '12px', padding: '48px', textAlign: 'center', fontSize: '14px', color: 'var(--text-muted)' }}>
-          Type in the search bar to find Verra carbon projects
+          Search carbon projects from the Verra VCS Registry
         </div>
       )}
+
+      <p style={{
+        position: 'fixed', bottom: '12px', right: '16px', fontSize: '11px',
+        color: '#c9a84c30', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.12em',
+        pointerEvents: 'none', zIndex: 9999, userSelect: 'none', margin: 0,
+      }}>
+        crafted by Aravind.S &copy;
+      </p>
     </div>
   )
 }

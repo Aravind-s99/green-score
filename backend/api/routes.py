@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
@@ -10,13 +11,16 @@ from ai.scorer import GreenScorer
 from ai.satellite import get_satellite_evidence_summary
 from scraper.verra import VerraScraper
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter(prefix="/api")
 
 
 class ScoreRequest(BaseModel):
     project_id: str = Field(..., min_length=1)
-    registry: Literal["verra", "goldstandard"]
+    registry: Literal["verra"] = "verra"
 
 
 def _utcnow() -> datetime:
@@ -81,10 +85,18 @@ def _run_scoring_pipeline(project_id: str, registry: str) -> dict:
     # 2) Satellite
     try:
         sat = get_satellite_evidence_summary(float(lat), float(lon))
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Satellite step failed (gee): {e}")
+        logger.warning(f"Satellite step failed: {e}")
+        sat = {
+            'ndvi_trend': 'unknown',
+            'ndvi': {},
+            'deforestation': {
+                'intact_forest_pct': 0,
+                'tree_cover_loss_ha': 0,
+                'loss_years': [],
+            },
+            'verified_by': 'Unavailable'
+        }
 
     # 3) Scorer
     try:
@@ -156,7 +168,7 @@ def post_score(body: ScoreRequest):
 
 
 @router.get("/score/{project_id}")
-def get_score(project_id: str, registry: Literal["verra", "goldstandard"] = "verra"):
+def get_score(project_id: str, registry: Literal["verra"] = "verra"):
     cached = _get_cached_score(project_id=project_id, registry=registry)
     if cached is not None:
         return cached
@@ -167,13 +179,14 @@ def get_score(project_id: str, registry: Literal["verra", "goldstandard"] = "ver
 
 
 @router.get("/search")
-def search_projects(q: str, registry: Literal["verra", "goldstandard"]):
-    if registry != "verra":
-        raise HTTPException(status_code=400, detail=f'Registry "{registry}" not implemented yet.')
+def search_projects(q: str):
     try:
-        return VerraScraper().search_projects(q)
+        verra = VerraScraper()
+        results = verra.search_projects(q)
+        return results
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Search failed (verra): {e}")
+        logging.warning(f"Verra search failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Search failed: {e}")
 
 
 @router.get("/projects/featured")

@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage.jsx'
 import Home from './pages/Home.jsx'
 import Score from './pages/Score.jsx'
 import Search from './pages/Search.jsx'
+import About from './pages/About.jsx'
 import Methodology from './pages/Methodology.jsx'
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/score/:projectId" element={<Score />} />
+        <Route path="/about" element={<About />} />
         <Route path="/methodology" element={<Methodology />} />
       </Routes>
       <p style={{

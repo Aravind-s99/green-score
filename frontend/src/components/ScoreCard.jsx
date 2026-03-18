@@ -7,9 +7,16 @@ function clamp0to100(n) {
 }
 
 function scoreLabel(s) {
-  if (s < 41) return { text: 'High Risk', color: '#ef4444' }
-  if (s <= 70) return { text: 'Moderate', color: '#f59e0b' }
-  return { text: 'Verified', color: 'var(--green-glow)' }
+  if (s >= 75) return { text: 'High Integrity', color: '#4caf50' }
+  if (s >= 55) return { text: 'Moderate Integrity', color: '#f59e0b' }
+  if (s >= 35) return { text: 'Low Integrity', color: '#ef4444' }
+  return { text: 'High Risk', color: '#dc2626' }
+}
+
+function getRiskFlagBadgeColor(count) {
+  if (count === 0) return { bg: 'rgba(76, 175, 80, 0.1)', border: '1px solid rgba(76, 175, 80, 0.3)', color: '#81c784' }
+  if (count <= 2) return { bg: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fbbf24' }
+  return { bg: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#f87171' }
 }
 
 function ProgressRow({ label, value, testId }) {
@@ -105,11 +112,34 @@ export default function ScoreCard({ score }) {
       </div>
 
       <div style={{ borderTop: '1px solid #c9a84c20', marginTop: '24px', paddingTop: '24px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)', marginBottom: '12px', letterSpacing: '0.05em' }}>
-          RISK FLAGS
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)', letterSpacing: '0.05em' }}>
+            RISK FLAGS
+          </div>
+          {riskFlags.length > 0 && (
+            <div style={{
+              ...getRiskFlagBadgeColor(riskFlags.length),
+              padding: '3px 8px',
+              borderRadius: '12px',
+              fontSize: '11px',
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+            }}>
+              {riskFlags.length} {riskFlags.length === 1 ? 'flag' : 'flags'}
+            </div>
+          )}
         </div>
         {riskFlags.length === 0 ? (
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>None detected</div>
+          <div style={{ 
+            fontSize: '13px', 
+            color: '#81c784',
+            background: 'rgba(76, 175, 80, 0.08)',
+            border: '1px solid rgba(76, 175, 80, 0.2)',
+            borderRadius: '6px',
+            padding: '10px 12px'
+          }}>
+            ✓ No risk flags detected
+          </div>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {riskFlags.map(flag => (

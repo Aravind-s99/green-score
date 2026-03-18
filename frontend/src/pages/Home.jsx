@@ -36,9 +36,11 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggLoading, setSuggLoading] = useState(false)
+  const [showScrollPrompt, setShowScrollPrompt] = useState(true)
   const suggTimer = useRef(null)
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
+  const featuredSectionRef = useRef(null)
   const normalizedQuery = useMemo(() => query.trim(), [query])
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function Home() {
         if (!cancelled) setFeaturedIds(ids)
         const cardPromises = ids.map(async (id) => {
           let score = null
-          try { score = await apiJson(`/api/score/${encodeURIComponent(id)}?registry=verra`) } catch {}
+          try { score = await apiJson(`/api/score/${encodeURIComponent(id)}`) } catch {}
           return {
             id,
             name: score?.project_name ?? score?.name ?? null,
@@ -83,6 +85,27 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
+  useEffect(() => {
+    function hideScrollPrompt() {
+      setShowScrollPrompt(false)
+    }
+    window.addEventListener('scroll', hideScrollPrompt)
+    window.addEventListener('touchmove', hideScrollPrompt)
+    return () => {
+      window.removeEventListener('scroll', hideScrollPrompt)
+      window.removeEventListener('touchmove', hideScrollPrompt)
+    }
+  }, [])
+
+  // scroll OR wheel triggers scrollToFeatured
+  useEffect(() => {
+    const handleWheel = () => {
+      if (showScrollPrompt) scrollToFeatured()
+    }
+    window.addEventListener('wheel', handleWheel, { once: true })
+    return () => window.removeEventListener('wheel', handleWheel)
+  }, [showScrollPrompt])
+
   function onQueryChange(e) {
     const val = e.target.value
     setQuery(val)
@@ -91,7 +114,7 @@ export default function Home() {
     setSuggLoading(true)
     suggTimer.current = setTimeout(async () => {
       try {
-        const data = await apiJson(`/api/search?q=${encodeURIComponent(val.trim())}&registry=verra`)
+        const data = await apiJson(`/api/search?q=${encodeURIComponent(val.trim())}`)
         setSuggestions(Array.isArray(data) ? data.slice(0, 8) : [])
         setShowSuggestions(true)
       } catch { setSuggestions([]) }
@@ -106,8 +129,15 @@ export default function Home() {
     navigate(`/search?q=${encodeURIComponent(normalizedQuery)}`)
   }
 
+  function scrollToFeatured() {
+    setShowScrollPrompt(false)
+    if (featuredSectionRef.current) {
+      featuredSectionRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
   return (
-    <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '80px 16px 60px' }}>
+    <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '80px 16px 60px', position: 'relative' }}>
       <section style={{
         background: 'var(--green-mid)',
         border: '1px solid #c9a84c40',
@@ -201,7 +231,45 @@ export default function Home() {
         </form>
       </section>
 
-      <section>
+      {/* Scroll prompt — centered, click or wheel to scroll down */}
+      {showScrollPrompt && (
+        <div
+          onClick={scrollToFeatured}
+          style={{
+            position: 'fixed',
+            bottom: '36px',
+            left: 0,
+            right: 0,
+            margin: '0 auto',
+            width: 'fit-content',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '6px',
+            zIndex: 100,
+            animation: 'bounce-down 2s infinite',
+          }}
+        >
+          <span style={{
+            fontSize: '11px',
+            letterSpacing: '0.2em',
+            color: '#c9a84c',
+            opacity: 0.7,
+            fontFamily: "'DM Sans', sans-serif",
+            textTransform: 'uppercase',
+            fontWeight: 500,
+          }}>
+            scroll to explore
+          </span>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M4 7L10 13L16 7" stroke="#c9a84c" strokeWidth="1.5"
+              strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      )}
+
+      <section ref={featuredSectionRef}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '22px', color: 'var(--gold)', margin: '0 0 4px' }}>
@@ -263,6 +331,23 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Watermark */}
+      <p style={{
+        position: 'fixed',
+        bottom: '12px',
+        right: '16px',
+        fontSize: '11px',
+        color: '#c9a84c30',
+        fontFamily: "'DM Sans', sans-serif",
+        letterSpacing: '0.12em',
+        pointerEvents: 'none',
+        zIndex: 9999,
+        userSelect: 'none',
+        margin: 0,
+      }}>
+        Aravind.S
+      </p>
     </main>
   )
 }

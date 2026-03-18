@@ -67,7 +67,7 @@ export default function Navbar() {
         >
           SEARCH PROJECTS
         </Link>
-        <Link to="/methodology" style={{
+        <Link to="/about" style={{
           color: 'var(--text-muted)',
           fontSize: '13px',
           fontWeight: 500,

@@ -132,7 +132,7 @@ export default function LandingPage() {
           style={{
             position: 'absolute',
             bottom: '36px',
-            left: '50%',
+            
             transform: 'translateX(-50%)',
             cursor: 'pointer',
             display: 'flex',

@@ -207,13 +207,14 @@ class VerraScraper:
         return {
             "project_id": str(project_id),
             "name": _clean(item.get("resourceName")),
-            "coordinates": {"lat": None, "lon": None},
+            "latitude": None,  # standardized key
+            "longitude": None,  # standardized key
+            "validation_body": None,
+            "status": _clean(item.get("resourceStatus")),
+            "documents_urls": [],
             "methodology": methodology,
             "estimated_annual_reductions": estimated_annual_reductions,
-            "validation_body": None,
-            "documents_urls": [],
             "country": _clean(item.get("country")),
-            "status": _clean(item.get("resourceStatus")),
             "proponent": _clean(item.get("proponent")),
             "region": _clean(item.get("region")),
             "crediting_period_start": item.get("creditingPeriodStartDate"),

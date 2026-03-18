@@ -1,4 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
+import Navbar from './components/Navbar.jsx'
+import LandingPage from './pages/LandingPage.jsx'
 import Home from './pages/Home.jsx'
 import Score from './pages/Score.jsx'
 import Search from './pages/Search.jsx'
@@ -7,8 +9,10 @@ import Methodology from './pages/Methodology.jsx'
 export default function App() {
   return (
     <div>
+      <Navbar />
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/search" element={<Search />} />
         <Route path="/score/:projectId" element={<Score />} />
         <Route path="/methodology" element={<Methodology />} />
@@ -23,7 +27,8 @@ export default function App() {
         letterSpacing: '0.12em',
         pointerEvents: 'none',
         zIndex: 9999,
-        userSelect: 'none'
+        userSelect: 'none',
+        margin: 0,
       }}>
         crafted by aravind
       </p>

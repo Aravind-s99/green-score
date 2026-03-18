@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 function clamp0to100(n) {
@@ -9,9 +9,9 @@ function clamp0to100(n) {
 
 function scoreColor(score) {
   const s = clamp0to100(score)
-  if (s < 40) return 'bg-red-50 text-red-700 ring-red-200'
-  if (s <= 70) return 'bg-amber-50 text-amber-700 ring-amber-200'
-  return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+  if (s < 40) return '#ef4444'
+  if (s <= 70) return '#f59e0b'
+  return '#4caf50'
 }
 
 async function apiJson(path, init) {
@@ -29,19 +29,16 @@ async function apiJson(path, init) {
 export default function Home() {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
-
   const [featuredIds, setFeaturedIds] = useState([])
   const [cards, setCards] = useState([])
   const [featuredError, setFeaturedError] = useState(null)
   const [loadingFeatured, setLoadingFeatured] = useState(true)
-
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggLoading, setSuggLoading] = useState(false)
   const suggTimer = useRef(null)
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
-
   const normalizedQuery = useMemo(() => query.trim(), [query])
 
   useEffect(() => {
@@ -52,24 +49,17 @@ export default function Home() {
         const featured = await apiJson('/api/projects/featured')
         const ids = featured?.project_ids ?? []
         if (!cancelled) setFeaturedIds(ids)
-
-        // Fetch score + registry detail (for name/country if present in score provenance).
         const cardPromises = ids.map(async (id) => {
           let score = null
-          try {
-            score = await apiJson(`/api/score/${encodeURIComponent(id)}?registry=verra`)
-          } catch {
-            // Score can fail if pipeline can’t run (coords missing, creds, etc.).
+          try { score = await apiJson(`/api/score/${encodeURIComponent(id)}?registry=verra`) } catch {}
+          return {
+            id,
+            name: score?.project_name ?? score?.name ?? null,
+            country: score?.country ?? null,
+            overall: clamp0to100(score?.overall),
+            score,
           }
-
-          // Best-effort display fields
-          const overall = clamp0to100(score?.overall)
-          const name = score?.project_name ?? score?.name ?? null
-          const country = score?.country ?? null
-
-          return { id, name, country, overall, score }
         })
-
         const resolved = await Promise.all(cardPromises)
         if (!cancelled) setCards(resolved)
       } catch (e) {
@@ -79,17 +69,13 @@ export default function Home() {
       }
     }
     loadFeatured()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
     function onClickOutside(e) {
-      if (
-        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
-        inputRef.current && !inputRef.current.contains(e.target)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+          inputRef.current && !inputRef.current.contains(e.target)) {
         setShowSuggestions(false)
       }
     }
@@ -101,22 +87,15 @@ export default function Home() {
     const val = e.target.value
     setQuery(val)
     clearTimeout(suggTimer.current)
-    if (val.trim().length < 2) {
-      setSuggestions([])
-      setShowSuggestions(false)
-      return
-    }
+    if (val.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return }
     setSuggLoading(true)
     suggTimer.current = setTimeout(async () => {
       try {
         const data = await apiJson(`/api/search?q=${encodeURIComponent(val.trim())}&registry=verra`)
         setSuggestions(Array.isArray(data) ? data.slice(0, 8) : [])
         setShowSuggestions(true)
-      } catch {
-        setSuggestions([])
-      } finally {
-        setSuggLoading(false)
-      }
+      } catch { setSuggestions([]) }
+      finally { setSuggLoading(false) }
     }, 300)
   }
 
@@ -128,132 +107,155 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10">
-      <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="max-w-2xl">
-          <h1 className="text-balance text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-            Green Score — AI-powered verification for carbon projects
-          </h1>
-          <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600">
-            Every score is backed by satellite data, public registries, and transparent AI analysis
-          </p>
+    <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '80px 16px 60px' }}>
+      <section style={{
+        background: 'var(--green-mid)',
+        border: '1px solid #c9a84c40',
+        borderRadius: '16px',
+        padding: '40px 32px',
+        marginBottom: '48px',
+      }}>
+        <h1 style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 'clamp(24px, 4vw, 36px)',
+          color: 'var(--gold)',
+          margin: '0 0 8px',
+          maxWidth: '600px',
+        }}>
+          CanopyScore
+        </h1>
+        <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '28px', maxWidth: '520px', lineHeight: 1.6 }}>
+          Every score is backed by satellite data, public registries, and transparent AI analysis
+        </p>
 
-          <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={onQueryChange}
-                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                placeholder="Search project name, ID, country, methodology…"
-                autoComplete="off"
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-              />
-              {suggLoading && (
-                <div className="absolute right-3 top-3.5">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-                </div>
-              )}
-              {showSuggestions && suggestions.length > 0 && (
-                <div
-                  ref={dropdownRef}
-                  className="absolute z-50 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden"
-                >
-                  {suggestions.map((s) => (
-                    <button
-                      key={s.project_id}
-                      type="button"
-                      onMouseDown={() => {
-                        setShowSuggestions(false)
-                        navigate(`/score/${encodeURIComponent(s.project_id)}`)
-                      }}
-                      className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-slate-900 truncate">{s.name}</div>
-                        <div className="flex gap-2 mt-0.5">
-                          {s.country && <span className="text-xs text-slate-500">{s.country}</span>}
-                          {s.methodology && <span className="text-xs text-emerald-600 truncate max-w-[160px]">{s.methodology}</span>}
-                        </div>
-                      </div>
-                      <span className="text-xs text-slate-400 shrink-0">VCS {s.project_id}</span>
-                    </button>
-                  ))}
-                  <button
-                    type="submit"
-                    className="w-full px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 text-center transition border-t border-slate-100"
+        <form onSubmit={onSubmit} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={onQueryChange}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              placeholder="Search project name, ID, country, methodology…"
+              autoComplete="off"
+              style={{
+                width: '100%',
+                background: '#0a1f0e',
+                border: '1px solid #c9a84c40',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                fontSize: '14px',
+                color: 'var(--text-primary)',
+                outline: 'none',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+              onFocus={e => { e.target.style.borderColor = '#c9a84c'; if (suggestions.length > 0) setShowSuggestions(true) }}
+              onBlur={e => e.target.style.borderColor = '#c9a84c40'}
+            />
+            {suggLoading && (
+              <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                <div style={{ width: '14px', height: '14px', border: '2px solid #c9a84c40', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              </div>
+            )}
+            {showSuggestions && suggestions.length > 0 && (
+              <div ref={dropdownRef} style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+                marginTop: '4px', background: '#1a4023', border: '1px solid #c9a84c40',
+                borderRadius: '10px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              }}>
+                {suggestions.map(s => (
+                  <button key={s.project_id} type="button"
+                    onMouseDown={() => { setShowSuggestions(false); navigate(`/score/${encodeURIComponent(s.project_id)}`) }}
+                    style={{
+                      width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center',
+                      justifyContent: 'space-between', gap: '12px', padding: '10px 14px',
+                      background: 'transparent', border: 'none', borderBottom: '1px solid #c9a84c15',
+                      cursor: 'pointer', color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#0a1f0e'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    See all results for "{query}" →
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {s.country && <span>{s.country}</span>}
+                        {s.methodology && <span style={{ color: 'var(--green-glow)', marginLeft: '8px' }}>{s.methodology}</span>}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>VCS {s.project_id}</span>
                   </button>
-                </div>
-              )}
-            </div>
-            <button
-              type="submit"
-              disabled={!normalizedQuery}
-              className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              Search
-            </button>
-          </form>
-        </div>
+                ))}
+                <button type="submit" style={{
+                  width: '100%', padding: '8px 14px', background: '#0a1f0e', border: 'none',
+                  borderTop: '1px solid #c9a84c20', color: 'var(--gold)', fontSize: '12px',
+                  fontFamily: "'DM Sans', sans-serif", cursor: 'pointer', textAlign: 'center',
+                  letterSpacing: '0.05em',
+                }}>
+                  See all results for "{query}" →
+                </button>
+              </div>
+            )}
+          </div>
+          <button type="submit" disabled={!normalizedQuery} className="canopy-btn">
+            Search
+          </button>
+        </form>
       </section>
 
-      <section className="mt-10">
-        <div className="flex items-end justify-between gap-4">
+      <section>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Featured Projects</h2>
-            <p className="mt-1 text-sm text-slate-600">Real Verra projects for quick evaluation.</p>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '22px', color: 'var(--gold)', margin: '0 0 4px' }}>
+              Featured Projects
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Real Verra projects for quick evaluation</p>
           </div>
-          <Link
-            to="/search"
-            className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-900 hover:decoration-slate-400"
-          >
-            Browse search
+          <Link to="/search" style={{ fontSize: '13px', color: 'var(--gold)', textDecoration: 'none', letterSpacing: '0.05em', fontWeight: 500 }}>
+            Browse all →
           </Link>
         </div>
 
         {featuredError ? (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '14px', fontSize: '13px', color: '#fca5a5' }}>
             {featuredError}
           </div>
         ) : (
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
             {(loadingFeatured ? featuredIds : cards).map((item, idx) => {
               const card = typeof item === 'string' ? { id: item } : item
               const overall = clamp0to100(card?.overall ?? 0)
-              const badge = scoreColor(overall)
+              const color = scoreColor(overall)
               return (
-                <Link
-                  key={card.id ?? idx}
-                  to={`/score/${encodeURIComponent(card.id)}`}
-                  className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                <Link key={card.id ?? idx} to={`/score/${encodeURIComponent(card.id)}`}
+                  style={{ textDecoration: 'none', display: 'block' }}
+                  className="canopy-card"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-slate-900">VCS {card.id}</div>
-                      <div className="mt-1 truncate text-sm text-slate-600">
-                        {card.name ?? '\u00A0'}
+                  <div style={{ padding: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: '4px' }}>VCS {card.id}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {card.name ?? '\u00A0'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{card.country ?? '\u00A0'}</div>
                       </div>
-                      <div className="mt-1 truncate text-xs text-slate-500">
-                        {card.country ?? '\u00A0'}
+                      <div style={{
+                        flexShrink: 0,
+                        background: `${color}18`,
+                        border: `1px solid ${color}50`,
+                        borderRadius: '6px',
+                        padding: '4px 8px',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        color: color,
+                        fontFamily: 'monospace',
+                      }}>
+                        {loadingFeatured ? '—' : Math.round(overall)}
                       </div>
                     </div>
-                    <div
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${badge}`}
-                      title="Overall score (0–100)"
-                    >
-                      {loadingFeatured ? '—' : Math.round(overall)}
+                    <div style={{ height: '3px', background: '#0a1f0e', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${loadingFeatured ? 0 : overall}%`, background: color, borderRadius: '2px', transition: 'width 0.8s ease' }} />
                     </div>
-                  </div>
-                  <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full bg-slate-900/70"
-                      style={{ width: `${loadingFeatured ? 0 : overall}%` }}
-                    />
-                  </div>
-                  <div className="mt-3 text-xs font-semibold text-slate-600 group-hover:text-slate-800">
-                    View score →
+                    <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--gold)', fontWeight: 500 }}>View score →</div>
                   </div>
                 </Link>
               )
@@ -264,4 +266,3 @@ export default function Home() {
     </main>
   )
 }
-

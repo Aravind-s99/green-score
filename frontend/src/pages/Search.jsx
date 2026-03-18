@@ -1,19 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
-function clamp0to100(n) {
-  const x = Number(n)
-  if (!Number.isFinite(x)) return 0
-  return Math.max(0, Math.min(100, x))
-}
-
-function scoreColor(score) {
-  const s = clamp0to100(score)
-  if (s < 40) return 'bg-red-50 text-red-700 ring-red-200'
-  if (s <= 70) return 'bg-amber-50 text-amber-700 ring-amber-200'
-  return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-}
-
 async function apiJson(path) {
   const res = await fetch(path)
   if (!res.ok) throw new Error(`Request failed: ${res.status}`)
@@ -22,37 +9,33 @@ async function apiJson(path) {
 
 function ResultCard({ project }) {
   return (
-    <Link
-      to={`/score/${encodeURIComponent(project.project_id)}`}
-      className="group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+    <Link to={`/score/${encodeURIComponent(project.project_id)}`}
+      style={{ textDecoration: 'none', display: 'block' }}
+      className="canopy-card"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium text-slate-400">VCS {project.project_id}</div>
-          <div className="mt-0.5 text-sm font-semibold text-slate-900 leading-snug line-clamp-2">
-            {project.name ?? 'Untitled Project'}
-          </div>
+      <div style={{ padding: '20px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: '4px' }}>VCS {project.project_id}</div>
+        <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px', lineHeight: 1.3 }}>
+          {project.name ?? 'Untitled Project'}
         </div>
-      </div>
-      <div className="flex flex-wrap gap-2 mt-1">
-        {project.country && (
-          <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-blue-200">
-            {project.country}
-          </span>
-        )}
-        {project.status && (
-          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-            {project.status}
-          </span>
-        )}
-        {project.methodology && (
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 truncate max-w-[200px]">
-            {project.methodology}
-          </span>
-        )}
-      </div>
-      <div className="mt-1 text-xs font-semibold text-slate-500 group-hover:text-slate-700">
-        View green score →
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+          {project.country && (
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: '#0a1f0e', border: '1px solid #c9a84c20', borderRadius: '4px', padding: '2px 8px' }}>
+              {project.country}
+            </span>
+          )}
+          {project.status && (
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: '#0a1f0e', border: '1px solid #c9a84c20', borderRadius: '4px', padding: '2px 8px' }}>
+              {project.status}
+            </span>
+          )}
+          {project.methodology && (
+            <span style={{ fontSize: '11px', color: 'var(--green-glow)', background: 'rgba(76,175,80,0.08)', border: '1px solid rgba(76,175,80,0.25)', borderRadius: '4px', padding: '2px 8px' }}>
+              {project.methodology}
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--gold)', fontWeight: 500 }}>View green score →</div>
       </div>
     </Link>
   )
@@ -68,7 +51,6 @@ export default function Search() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [searched, setSearched] = useState(false)
-
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggLoading, setSuggLoading] = useState(false)
@@ -76,18 +58,12 @@ export default function Search() {
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
 
-  useEffect(() => {
-    if (initialQuery) {
-      runSearch(initialQuery)
-    }
-  }, [])
+  useEffect(() => { if (initialQuery) runSearch(initialQuery) }, [])
 
   useEffect(() => {
     function onClickOutside(e) {
-      if (
-        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
-        inputRef.current && !inputRef.current.contains(e.target)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+          inputRef.current && !inputRef.current.contains(e.target)) {
         setShowSuggestions(false)
       }
     }
@@ -97,41 +73,27 @@ export default function Search() {
 
   async function runSearch(q) {
     if (!q.trim()) return
-    setLoading(true)
-    setError(null)
-    setSearched(true)
-    setShowSuggestions(false)
+    setLoading(true); setError(null); setSearched(true); setShowSuggestions(false)
     try {
       const data = await apiJson(`/api/search?q=${encodeURIComponent(q.trim())}&registry=verra`)
       setResults(Array.isArray(data) ? data : [])
-    } catch (e) {
-      setError(e.message)
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
+    } catch (e) { setError(e.message); setResults([]) }
+    finally { setLoading(false) }
   }
 
   function onInputChange(e) {
     const val = e.target.value
     setInputValue(val)
     clearTimeout(suggTimer.current)
-    if (val.trim().length < 2) {
-      setSuggestions([])
-      setShowSuggestions(false)
-      return
-    }
+    if (val.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return }
     setSuggLoading(true)
     suggTimer.current = setTimeout(async () => {
       try {
         const data = await apiJson(`/api/search?q=${encodeURIComponent(val.trim())}&registry=verra`)
         setSuggestions(Array.isArray(data) ? data.slice(0, 8) : [])
         setShowSuggestions(true)
-      } catch {
-        setSuggestions([])
-      } finally {
-        setSuggLoading(false)
-      }
+      } catch { setSuggestions([]) }
+      finally { setSuggLoading(false) }
     }, 300)
   }
 
@@ -143,109 +105,108 @@ export default function Search() {
     runSearch(q)
   }
 
-  function onSuggestionClick(project) {
-    setShowSuggestions(false)
-    navigate(`/score/${encodeURIComponent(project.project_id)}`)
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-4xl px-4 py-10 space-y-8">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-sm text-blue-600 hover:underline whitespace-nowrap">&larr; Home</Link>
-          <h1 className="text-2xl font-bold text-slate-900 truncate">
-            {initialQuery ? `Results for "${initialQuery}"` : 'Search Projects'}
-          </h1>
-        </div>
+    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '80px 16px 60px' }}>
+      <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+        <Link to="/home" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}>← Home</Link>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '26px', color: 'var(--gold)', margin: 0 }}>
+          {initialQuery ? `Results for "${initialQuery}"` : 'Search Projects'}
+        </h1>
+      </div>
 
-        <div className="relative">
-          <form onSubmit={onSubmit} className="flex gap-3">
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                value={inputValue}
-                onChange={onInputChange}
-                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                placeholder="Search by name, country, ID or methodology…"
-                autoComplete="off"
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-              />
-              {suggLoading && (
-                <div className="absolute right-3 top-3.5">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-                </div>
-              )}
+      <form onSubmit={onSubmit} style={{ display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+          <input
+            ref={inputRef}
+            value={inputValue}
+            onChange={onInputChange}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            placeholder="Search by name, country, ID or methodology…"
+            autoComplete="off"
+            style={{
+              width: '100%', background: '#0a1f0e', border: '1px solid #c9a84c40',
+              borderRadius: '8px', padding: '12px 16px', fontSize: '14px',
+              color: 'var(--text-primary)', outline: 'none', fontFamily: "'DM Sans', sans-serif",
+            }}
+            onFocus={e => { e.target.style.borderColor = '#c9a84c'; if (suggestions.length > 0) setShowSuggestions(true) }}
+            onBlur={e => e.target.style.borderColor = '#c9a84c40'}
+          />
+          {suggLoading && (
+            <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+              <div style={{ width: '14px', height: '14px', border: '2px solid #c9a84c40', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             </div>
-            <button
-              type="submit"
-              disabled={!inputValue.trim()}
-              className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              Search
-            </button>
-          </form>
-
+          )}
           {showSuggestions && suggestions.length > 0 && (
-            <div
-              ref={dropdownRef}
-              className="absolute z-50 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden"
-            >
-              {suggestions.map((s) => (
-                <button
-                  key={s.project_id}
-                  onMouseDown={() => onSuggestionClick(s)}
-                  className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition"
+            <div ref={dropdownRef} style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+              marginTop: '4px', background: '#1a4023', border: '1px solid #c9a84c40',
+              borderRadius: '10px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            }}>
+              {suggestions.map(s => (
+                <button key={s.project_id} type="button"
+                  onMouseDown={() => { setShowSuggestions(false); navigate(`/score/${encodeURIComponent(s.project_id)}`) }}
+                  style={{
+                    width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between', gap: '12px', padding: '10px 14px',
+                    background: 'transparent', border: 'none', borderBottom: '1px solid #c9a84c15',
+                    cursor: 'pointer', color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#0a1f0e'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-slate-900 truncate">{s.name}</div>
-                    <div className="flex gap-2 mt-0.5">
-                      {s.country && <span className="text-xs text-slate-500">{s.country}</span>}
-                      {s.methodology && <span className="text-xs text-emerald-600">{s.methodology}</span>}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {s.country && <span>{s.country}</span>}
+                      {s.methodology && <span style={{ color: 'var(--green-glow)', marginLeft: '8px' }}>{s.methodology}</span>}
                     </div>
                   </div>
-                  <span className="text-xs text-slate-400 shrink-0">VCS {s.project_id}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>VCS {s.project_id}</span>
                 </button>
               ))}
             </div>
           )}
         </div>
+        <button type="submit" disabled={!inputValue.trim()} className="canopy-btn">Search</button>
+      </form>
 
-        {loading && (
-          <div className="flex items-center gap-3 text-sm text-slate-600">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-            Searching Verra registry…
+      {loading && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '13px' }}>
+          <div style={{ width: '16px', height: '16px', border: '2px solid #c9a84c40', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          Searching Verra registry…
+        </div>
+      )}
+
+      {error && (
+        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '14px', fontSize: '13px', color: '#fca5a5' }}>
+          {error}
+        </div>
+      )}
+
+      {!loading && searched && results.length === 0 && !error && (
+        <div style={{ background: 'var(--green-mid)', border: '1px solid #c9a84c20', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
+          <div style={{ fontSize: '36px', marginBottom: '12px' }}>🌿</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", color: 'var(--gold)', fontSize: '18px', marginBottom: '6px' }}>No results found</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Try a different name, country, or project ID</div>
+        </div>
+      )}
+
+      {!loading && results.length > 0 && (
+        <>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            {results.length} result{results.length !== 1 ? 's' : ''}
           </div>
-        )}
-
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
-        )}
-
-        {!loading && searched && results.length === 0 && !error && (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-            <div className="text-3xl mb-3">🔍</div>
-            <div className="text-sm font-semibold text-slate-700">No results found</div>
-            <div className="text-sm text-slate-500 mt-1">Try a different name, country, or project ID</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            {results.map(project => <ResultCard key={project.project_id} project={project} />)}
           </div>
-        )}
+        </>
+      )}
 
-        {!loading && results.length > 0 && (
-          <>
-            <div className="text-sm text-slate-500">{results.length} result{results.length !== 1 ? 's' : ''}</div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {results.map((project) => (
-                <ResultCard key={project.project_id} project={project} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {!searched && !loading && (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
-            Type in the search bar to find Verra carbon projects
-          </div>
-        )}
-      </div>
+      {!searched && !loading && (
+        <div style={{ background: 'var(--green-mid)', border: '1px dashed #c9a84c30', borderRadius: '12px', padding: '48px', textAlign: 'center', fontSize: '14px', color: 'var(--text-muted)' }}>
+          Type in the search bar to find Verra carbon projects
+        </div>
+      )}
     </div>
   )
 }

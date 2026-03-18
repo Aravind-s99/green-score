@@ -1,2 +1,116 @@
 @import 'tailwindcss';
 
+:root {
+  --green-deep: #0a1f0e;
+  --green-mid: #1a4023;
+  --green-bright: #2d7a3a;
+  --green-glow: #4caf50;
+  --gold: #c9a84c;
+  --gold-light: #e8c97a;
+  --cream: #f5f0e8;
+  --text-primary: #e8f5e9;
+  --text-muted: #8aab8e;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--green-deep);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  margin: 0;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Playfair Display', serif;
+  color: var(--gold);
+}
+
+.canopy-card {
+  background: var(--green-mid);
+  border: 1px solid #c9a84c40;
+  border-radius: 12px;
+  transition: border-color 0.2s;
+}
+.canopy-card:hover { border-color: var(--gold); }
+
+.canopy-btn {
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  background: transparent;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.canopy-btn:hover {
+  background: var(--gold);
+  color: var(--green-deep);
+}
+.canopy-btn:disabled {
+  border-color: #c9a84c40;
+  color: #c9a84c40;
+  cursor: not-allowed;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--green-mid); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+
+@keyframes gold-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.gold-shimmer {
+  background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 40%, var(--gold) 60%, var(--gold-light) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gold-shimmer 3s linear infinite;
+}
+
+@keyframes bounce-down {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(8px); }
+}
+.bounce-down { animation: bounce-down 1.4s ease-in-out infinite; }
+
+@keyframes leaf-fall {
+  0%   { transform: translateY(-40px) rotate(0deg)   translateX(0px);   opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translateY(50vh)  rotate(180deg) translateX(30px);  }
+  90%  { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg) translateX(-20px); opacity: 0; }
+}
+
+@keyframes draw-path {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes clip-reveal {
+  from { clip-path: circle(0% at 50% 50%); }
+  to   { clip-path: circle(150% at 50% 50%); }
+}
+.clip-reveal { animation: clip-reveal 0.8s ease-in-out forwards; }
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import ScoreCard from '../components/ScoreCard.jsx'
+import LeafLoader from '../components/LeafLoader.jsx'
 
 async function apiJson(path, init) {
   const res = await fetch(path, {
@@ -16,29 +17,14 @@ async function apiJson(path, init) {
 
 function latestFetchedAt(score) {
   const sources = Array.isArray(score?.evidence_sources) ? score.evidence_sources : []
-  const times = sources
-    .map((s) => (typeof s?.fetched_at === 'string' ? s.fetched_at : null))
-    .filter(Boolean)
-  if (times.length === 0) return null
-  // ISO timestamps sort lexicographically if consistent
-  return times.slice().sort().at(-1) ?? null
+  const times = sources.map(s => typeof s?.fetched_at === 'string' ? s.fetched_at : null).filter(Boolean)
+  return times.length === 0 ? null : times.slice().sort().at(-1) ?? null
 }
 
 export default function Score() {
   const { projectId } = useParams()
   const [score, setScore] = useState(null)
   const [error, setError] = useState(null)
-  const [phaseIdx, setPhaseIdx] = useState(0)
-
-  const phases = useMemo(
-    () => ['Fetching registry data...', 'Checking satellite imagery...', 'Running AI analysis...'],
-    [],
-  )
-
-  useEffect(() => {
-    const t = setInterval(() => setPhaseIdx((i) => (i + 1) % phases.length), 1300)
-    return () => clearInterval(t)
-  }, [phases.length])
 
   useEffect(() => {
     let cancelled = false
@@ -54,42 +40,55 @@ export default function Score() {
       }
     }
     if (projectId) run()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [projectId])
 
   const lastUpdated = latestFetchedAt(score)
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10">
-      <div className="mb-6 space-y-1">
-        <div className="text-sm font-semibold text-slate-900">Project score</div>
-        <div className="text-sm text-slate-600">
-          Data from: <span className="font-medium">Verra Registry</span> +{' '}
-          <span className="font-medium">Sentinel-2</span> + <span className="font-medium">Hansen Forest</span>
-        </div>
-        <div className="text-xs text-slate-500">
-          Last updated: <span className="tabular-nums">{lastUpdated ?? '—'}</span>
+    <main style={{ maxWidth: '860px', margin: '0 auto', padding: '80px 16px 40px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <Link to="/home" style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}>
+          ← Back
+        </Link>
+        <div style={{ marginTop: '12px' }}>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '26px', color: 'var(--gold)', margin: '0 0 4px' }}>
+            Project Score
+          </h1>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            Verra Registry · Sentinel-2 · Hansen Forest Change
+          </div>
+          {lastUpdated && (
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Last updated: {lastUpdated}
+            </div>
+          )}
         </div>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+        <div style={{
+          background: 'rgba(239,68,68,0.08)',
+          border: '1px solid rgba(239,68,68,0.3)',
+          borderRadius: '12px',
+          padding: '16px',
+          fontSize: '13px',
+          color: '#fca5a5',
+        }}>
+          {error}
+        </div>
       ) : score ? (
         <ScoreCard score={score} />
       ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <div className="text-sm font-semibold text-slate-900">{phases[phaseIdx]}</div>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full w-1/3 bg-slate-900/70 transition-all"
-              style={{ marginLeft: `${(phaseIdx * 33) % 67}%` }}
-            />
-          </div>
+        <div style={{
+          background: 'var(--green-mid)',
+          border: '1px solid #c9a84c40',
+          borderRadius: '16px',
+          overflow: 'hidden',
+        }}>
+          <LeafLoader />
         </div>
       )}
     </main>
   )
 }
-

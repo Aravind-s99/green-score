@@ -6,33 +6,44 @@ function clamp0to100(n) {
   return Math.max(0, Math.min(100, x))
 }
 
-function colorForScore(score) {
-  const s = clamp0to100(score)
-  if (s < 40) return { fg: 'text-red-600', ring: 'stroke-red-500', bar: 'bg-red-500' }
-  if (s <= 70) return { fg: 'text-amber-600', ring: 'stroke-amber-500', bar: 'bg-amber-500' }
-  return { fg: 'text-emerald-600', ring: 'stroke-emerald-500', bar: 'bg-emerald-500' }
+function scoreLabel(s) {
+  if (s < 41) return { text: 'High Risk', color: '#ef4444' }
+  if (s <= 70) return { text: 'Moderate', color: '#f59e0b' }
+  return { text: 'Verified', color: 'var(--green-glow)' }
 }
 
 function ProgressRow({ label, value, testId }) {
   const v = clamp0to100(value)
-  const c = colorForScore(v)
-
   return (
-    <div className="space-y-1" data-testid={testId}>
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="text-sm font-medium text-slate-800">{label}</div>
-        <div className={`text-sm tabular-nums ${c.fg}`}>{Math.round(v)}</div>
+    <div style={{ marginBottom: '16px' }} data-testid={testId}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+        <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>{label}</span>
+        <span style={{ fontSize: '13px', color: 'var(--gold)', fontFamily: 'monospace' }}>{Math.round(v)}</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-        <div className={`h-full ${c.bar}`} style={{ width: `${v}%` }} />
+      <div style={{ height: '4px', background: '#0a1f0e', borderRadius: '2px', overflow: 'hidden', border: '1px solid #c9a84c20' }}>
+        <div style={{
+          height: '100%',
+          width: `${v}%`,
+          background: v < 41 ? '#ef4444' : v <= 70 ? '#f59e0b' : 'var(--gold)',
+          borderRadius: '2px',
+          transition: 'width 0.8s ease',
+        }} />
       </div>
     </div>
   )
 }
 
+function LeafBullet() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: '2px' }}>
+      <path d="M12 2C8 2 4 6 4 11c0 2.5 1 4.5 3 6l5-7 5 7c2-1.5 3-3.5 3-6 0-5-4-9-8-9z" fill="#c9a84c" opacity="0.7" />
+    </svg>
+  )
+}
+
 export default function ScoreCard({ score }) {
   const overall = clamp0to100(score?.overall ?? score?.overall_score ?? 0)
-  const c = colorForScore(overall)
+  const label = scoreLabel(overall)
 
   const r = 52
   const stroke = 10
@@ -43,69 +54,78 @@ export default function ScoreCard({ score }) {
   const evidenceSources = Array.isArray(score?.evidence_sources) ? score.evidence_sources : []
 
   return (
-    <section className="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-5">
-          <div className="relative h-32 w-32">
-            <svg viewBox="0 0 120 120" className="h-full w-full">
+    <section style={{
+      background: 'var(--green-mid)',
+      border: '1px solid #c9a84c40',
+      borderRadius: '16px',
+      padding: '28px',
+    }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <div style={{ position: 'relative', width: '128px', height: '128px', flexShrink: 0 }}>
+            <svg viewBox="0 0 120 120" style={{ width: '100%', height: '100%' }}>
+              <circle cx="60" cy="60" r={r} fill="#0a1f0e" stroke="#1a4023" strokeWidth={stroke} />
               <circle
-                cx="60"
-                cy="60"
-                r={r}
+                cx="60" cy="60" r={r}
                 fill="none"
-                className="stroke-slate-200"
-                strokeWidth={stroke}
-              />
-              <circle
-                cx="60"
-                cy="60"
-                r={r}
-                fill="none"
-                className={c.ring}
+                stroke="var(--gold)"
                 strokeWidth={stroke}
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={offset}
                 transform="rotate(-90 60 60)"
+                style={{ transition: 'stroke-dashoffset 1s ease' }}
               />
             </svg>
-            <div className="absolute inset-0 grid place-items-center">
-              <div className="text-center">
-                <div className={`text-3xl font-semibold tabular-nums ${c.fg}`}>{Math.round(overall)}</div>
-                <div className="text-xs font-medium tracking-wide text-slate-500">OVERALL</div>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: '30px', color: 'var(--gold)', fontWeight: 700, lineHeight: 1 }}>
+                {Math.round(overall)}
               </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.15em', marginTop: '4px' }}>OVERALL</div>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <div className="text-base font-semibold text-slate-900">Green Score</div>
-            <div className="text-sm text-slate-600">0–100 composite score</div>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: '18px', color: 'var(--gold)', fontWeight: 600 }}>
+              Green Score
+            </div>
+            <div style={{ fontSize: '22px', fontWeight: 700, color: label.color, marginTop: '4px' }}>
+              {label.text}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>0–100 composite score</div>
           </div>
         </div>
 
-        <div className="grid w-full grid-cols-1 gap-4 md:max-w-lg md:grid-cols-2">
-          <ProgressRow label="Authenticity" value={score?.authenticity} testId="sub-authenticity" />
-          <ProgressRow
-            label="Carbon efficiency"
-            value={score?.carbon_efficiency}
-            testId="sub-carbon-efficiency"
-          />
-          <ProgressRow label="Biodiversity" value={score?.biodiversity} testId="sub-biodiversity" />
-          <ProgressRow label="Transparency" value={score?.transparency} testId="sub-transparency" />
+        <div style={{ flex: '1', minWidth: '260px', maxWidth: '480px' }}>
+          <ProgressRow label="Authenticity"      value={score?.authenticity}      testId="sub-authenticity" />
+          <ProgressRow label="Carbon Efficiency" value={score?.carbon_efficiency} testId="sub-carbon-efficiency" />
+          <ProgressRow label="Biodiversity"      value={score?.biodiversity}      testId="sub-biodiversity" />
+          <ProgressRow label="Transparency"      value={score?.transparency}      testId="sub-transparency" />
         </div>
       </div>
 
-      <div className="mt-6 border-t border-slate-200 pt-6">
-        <div className="text-sm font-semibold text-slate-900">Risk Flags</div>
+      <div style={{ borderTop: '1px solid #c9a84c20', marginTop: '24px', paddingTop: '24px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)', marginBottom: '12px', letterSpacing: '0.05em' }}>
+          RISK FLAGS
+        </div>
         {riskFlags.length === 0 ? (
-          <div className="mt-2 text-sm text-slate-600">None</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>None detected</div>
         ) : (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {riskFlags.map((flag) => (
-              <span
-                key={flag}
-                className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700"
-              >
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {riskFlags.map(flag => (
+              <span key={flag} style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                borderLeft: '3px solid #ef4444',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#fca5a5',
+                letterSpacing: '0.04em',
+              }}>
                 {flag}
               </span>
             ))}
@@ -113,70 +133,83 @@ export default function ScoreCard({ score }) {
         )}
       </div>
 
-      <div className="mt-6 border-t border-slate-200 pt-6">
-        <details className="group rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+      <div style={{ borderTop: '1px solid #c9a84c20', marginTop: '24px', paddingTop: '24px' }}>
+        <details>
+          <summary style={{
+            cursor: 'pointer',
+            listStyle: 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            userSelect: 'none',
+          }}>
             <div>
-              <div className="text-sm font-semibold text-slate-900">Evidence Sources</div>
-              <div className="mt-1 text-xs text-slate-600">
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)', letterSpacing: '0.05em' }}>
+                EVIDENCE SOURCES
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 Every output is traceable to a URL and fetch timestamp.
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-600">
-                {evidenceSources.length} source{evidenceSources.length === 1 ? '' : 's'}
-              </span>
-              <span className="text-slate-500 transition-transform group-open:rotate-180" aria-hidden>
-                ▼
-              </span>
-            </div>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {evidenceSources.length} source{evidenceSources.length !== 1 ? 's' : ''} ▼
+            </span>
           </summary>
 
-          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
-            <div className="grid grid-cols-1 gap-0">
-              {evidenceSources.length === 0 ? (
-                <div className="p-4 text-sm text-slate-600">No evidence sources provided.</div>
-              ) : (
-                evidenceSources.map((src, idx) => (
-                  <div
-                    key={`${src?.name ?? 'source'}-${idx}`}
-                    className={`p-4 ${idx === 0 ? '' : 'border-t border-slate-200'}`}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <div className="text-sm font-semibold text-slate-900">{src?.name ?? 'Source'}</div>
-                      {src?.url ? (
-                        <a
-                          href={src.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="break-all text-sm font-medium text-blue-700 underline decoration-blue-200 underline-offset-2 hover:decoration-blue-400"
-                        >
-                          {src.url}
-                        </a>
-                      ) : (
-                        <div className="text-sm text-slate-500">No URL</div>
-                      )}
-                      <div className="text-xs text-slate-500">
-                        Fetched: <span className="tabular-nums">{src?.fetched_at ?? '—'}</span>
-                      </div>
+          <div style={{ marginTop: '16px', borderRadius: '8px', border: '1px solid #c9a84c20', overflow: 'hidden' }}>
+            {evidenceSources.length === 0 ? (
+              <div style={{ padding: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>No evidence sources.</div>
+            ) : (
+              evidenceSources.map((src, idx) => (
+                <div key={`${src?.name ?? 'source'}-${idx}`} style={{
+                  padding: '14px 16px',
+                  borderTop: idx === 0 ? 'none' : '1px solid #c9a84c15',
+                  display: 'flex',
+                  gap: '10px',
+                  alignItems: 'flex-start',
+                }}>
+                  <LeafBullet />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{src?.name ?? 'Source'}</div>
+                    {src?.url ? (
+                      <a href={src.url} target="_blank" rel="noreferrer" style={{
+                        fontSize: '12px',
+                        color: 'var(--green-glow)',
+                        wordBreak: 'break-all',
+                        textDecoration: 'underline',
+                        textUnderlineOffset: '2px',
+                      }}>
+                        {src.url}
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No URL</span>
+                    )}
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      Fetched: {src?.fetched_at ?? '—'}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            )}
           </div>
         </details>
       </div>
 
-      <div className="mt-6 flex justify-end">
-        <Link
-          to="/methodology"
-          className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-900 hover:decoration-slate-400"
-        >
-          Scoring Methodology
+      <div style={{ borderTop: '1px solid #c9a84c20', marginTop: '24px', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+          Powered by Verra Registry + Sentinel-2 + Hansen GFC
+        </span>
+        <Link to="/methodology" style={{
+          fontSize: '12px',
+          color: 'var(--gold)',
+          textDecoration: 'underline',
+          textUnderlineOffset: '3px',
+          fontWeight: 500,
+          letterSpacing: '0.05em',
+        }}>
+          Scoring Methodology →
         </Link>
       </div>
     </section>
   )
 }
-

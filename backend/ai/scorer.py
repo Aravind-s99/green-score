@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import math
 import re
 from datetime import datetime, timezone
 from typing import Any
 
 from transformers import pipeline
+
+logging.basicConfig(level=logging.INFO)
 
 
 def _iso_utc_now() -> str:
@@ -135,27 +138,50 @@ class GreenScorer:
         Expects combined data from verra scraper + satellite module (flexible keys).
         Produces four 0-100 sub-scores + weighted overall, risk flags, and evidence sources.
         """
+        logging.info(f"Scoring project: {project_data.get('project_id')}")
+        logging.info(f"Satellite data: {project_data.get('satellite')}")
+        logging.info(f"Documents count: {len(project_data.get('documents_urls', []))}")
+
         verra = project_data.get("verra") if isinstance(project_data, dict) else None
         satellite = project_data.get("satellite") if isinstance(project_data, dict) else None
         verra = verra if isinstance(verra, dict) else (project_data if isinstance(project_data, dict) else {})
         satellite = satellite if isinstance(satellite, dict) else project_data.get("satellite_evidence", {})
         satellite = satellite if isinstance(satellite, dict) else {}
 
+        # Pull key fields from verra data for Verra-based fallback scoring
+        est = _get(verra, "estimated_annual_reductions") or project_data.get("estimated_annual_reductions")
+        methodology = _get(verra, "methodology") or project_data.get("methodology") or ""
+        validation_body = _get(verra, "validation_body") or project_data.get("validation_body") or ""
+        status = _get(verra, "status") or project_data.get("status") or ""
+        docs = _get(verra, "documents_urls") or project_data.get("documents_urls") or []
+        doc_count = len(docs) if isinstance(docs, list) else 0
+        country = _get(verra, "country") or project_data.get("country") or ""
+        claimed = _get(verra, "coordinates") or project_data.get("coordinates") or {}
+        claimed_lat = _get(claimed, "lat") if isinstance(claimed, dict) else None
+        claimed_lon = _get(claimed, "lon") if isinstance(claimed, dict) else None
+        issued = (
+            project_data.get("issued_credits")
+            or project_data.get("issued_credits_total")
+            or _get(verra, "issued_credits")
+            or _get(verra, "issued_credits_total")
+        )
+
+        logging.info(
+            f"  est={est} methodology={methodology!r} status={status!r} "
+            f"docs={doc_count} country={country!r} lat={claimed_lat} lon={claimed_lon}"
+        )
+
         risk_flags: list[str] = []
 
-        # --- Authenticity: coordinate agreement (if both available) ---
-        claimed = _get(verra, "coordinates") or {}
-        claimed_lat = _get(claimed, "lat")
-        claimed_lon = _get(claimed, "lon")
+        # --- Authenticity ---
         observed_lat = _get(project_data, "lat") or _get(project_data, "coordinates", "lat")
         observed_lon = _get(project_data, "lon") or _get(project_data, "coordinates", "lon")
 
-        authenticity = 50
-        if isinstance(claimed_lat, (int, float)) and isinstance(claimed_lon, (int, float)) and isinstance(
-            observed_lat, (int, float)
-        ) and isinstance(observed_lon, (int, float)):
+        has_coords = isinstance(claimed_lat, (int, float)) and isinstance(claimed_lon, (int, float))
+
+        # Try satellite-based coordinate agreement first
+        if has_coords and isinstance(observed_lat, (int, float)) and isinstance(observed_lon, (int, float)):
             dist_km = _haversine_km(float(claimed_lat), float(claimed_lon), float(observed_lat), float(observed_lon))
-            # 5km buffer: 0-5km OK; beyond 25km is very suspicious
             if dist_km <= 5:
                 authenticity = 95
             elif dist_km <= 10:
@@ -167,21 +193,22 @@ class GreenScorer:
                 authenticity = 15
                 risk_flags.append("coordinates_mismatch_severe")
         else:
-            risk_flags.append("missing_coordinates")
-            authenticity = 35
+            # Verra-data fallback: build score from available registry fields
+            authenticity = 0
+            if has_coords:
+                authenticity += 30
+            if validation_body:
+                authenticity += 30
+            if status.lower() == "registered":
+                authenticity += 20
+            if doc_count >= 2:
+                authenticity += 20
+            if not has_coords:
+                risk_flags.append("missing_coordinates")
 
-        # --- Carbon efficiency: issued credits vs estimated reductions ratio ---
-        est = _get(verra, "estimated_annual_reductions")
-        issued = (
-            project_data.get("issued_credits")
-            or project_data.get("issued_credits_total")
-            or _get(verra, "issued_credits")
-            or _get(verra, "issued_credits_total")
-        )
-        carbon_eff = 50
+        # --- Carbon efficiency ---
         if isinstance(est, (int, float)) and est > 0 and isinstance(issued, (int, float)):
             ratio = float(issued) / float(est)
-            # Ideal-ish around 0.8..1.2. Penalize extremes.
             if 0.8 <= ratio <= 1.2:
                 carbon_eff = 90
             elif 0.6 <= ratio < 0.8 or 1.2 < ratio <= 1.5:
@@ -194,10 +221,24 @@ class GreenScorer:
                 carbon_eff = 20
                 risk_flags.append("carbon_ratio_high_risk")
         else:
-            carbon_eff = 35
-            risk_flags.append("missing_carbon_inputs")
+            # Verra-data fallback: build score from registry fields
+            carbon_eff = 0
+            if isinstance(est, (int, float)):
+                if est > 100_000:
+                    carbon_eff += 40
+                elif est > 50_000:
+                    carbon_eff += 25
+                elif est > 10_000:
+                    carbon_eff += 10
+            high_integrity = {"brazil", "kenya", "cambodia", "peru"}
+            if country.strip().lower() in high_integrity:
+                carbon_eff += 20
+            if "REDD" in methodology.upper():
+                carbon_eff += 20
+            if carbon_eff == 0:
+                risk_flags.append("missing_carbon_inputs")
 
-        # --- Biodiversity: NDVI trend + intact forest % ---
+        # --- Biodiversity: NDVI trend + intact forest % from satellite ---
         ndvi = _get(satellite, "ndvi") or {}
         trend = ndvi.get("trend") if isinstance(ndvi, dict) else None
         trend_component = _trend_score(trend)
@@ -216,25 +257,22 @@ class GreenScorer:
             if float(defo["tree_cover_loss_ha"]) > 50:
                 risk_flags.append("recent_tree_cover_loss")
 
-        # --- Transparency: number of documents + audit signal ---
-        docs = _get(verra, "documents_urls")
-        doc_count = len(docs) if isinstance(docs, list) else 0
-        validator = _get(verra, "validation_body")
+        # --- Transparency ---
+        transparency = 0
+        if methodology:
+            transparency += 20
+        if validation_body:
+            transparency += 20
+        if status.lower() == "registered":
+            transparency += 20
+        if doc_count > 0:
+            transparency += 20
+        if isinstance(est, (int, float)) and est > 0:
+            transparency += 20
 
-        transparency = 30
-        if doc_count >= 10:
-            transparency = 85
-        elif doc_count >= 5:
-            transparency = 70
-        elif doc_count >= 1:
-            transparency = 50
-        else:
-            transparency = 25
+        if doc_count == 0:
             risk_flags.append("no_public_documents")
-
-        if validator:
-            transparency = min(100, transparency + 10)
-        else:
+        if not validation_body:
             risk_flags.append("missing_validation_body")
 
         # --- Overall weighted average ---

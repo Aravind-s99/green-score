@@ -1,0 +1,134 @@
+Rebrand and redesign the entire frontend of this app. 
+The new name is "CanopyScore".
+
+Design direction: luxury nature — deep forest greens, 
+rich black backgrounds, gold accents. Like a premium 
+financial data terminal but for the planet.
+
+COLOR SYSTEM — add to index.css as CSS variables:
+--green-deep: #0a1f0e
+--green-mid: #1a4023
+--green-bright: #2d7a3a
+--green-glow: #4caf50
+--gold: #c9a84c
+--gold-light: #e8c97a
+--cream: #f5f0e8
+--text-primary: #e8f5e9
+--text-muted: #8aab8e
+
+==================================================
+STEP 1 — LANDING PAGE (LandingPage.jsx)
+==================================================
+Create src/pages/LandingPage.jsx — a full-screen hero 
+that shows BEFORE the app. User scrolls down to enter.
+
+Structure:
+- Fixed background: dark forest (#0a1f0e) with a subtle 
+  noise texture overlay (use CSS background-image with 
+  a repeating SVG noise pattern at 3% opacity)
+- Centered content:
+  * Logo: a simple leaf SVG icon in gold above the title
+  * Title: "CanopyScore" in a serif font (use Google Font 
+    "Playfair Display") — large, 72px, gold color (#c9a84c)
+  * Tagline below: "AI-powered truth for carbon markets" 
+    in 18px, --text-muted color, letter-spacing: 0.15em
+  * A thin gold horizontal rule (width: 120px, margin: auto)
+  * Short description (2 lines max): 
+    "Every green project. Verified by satellite data, 
+    public registries, and transparent AI scoring."
+  * Scroll indicator at bottom: animated gold chevron 
+    pointing down with text "scroll to explore" 
+    (use CSS keyframes to make it bounce gently)
+
+- On scroll past 100vh, smoothly transition to the main app 
+  using IntersectionObserver. The transition should feel like 
+  parting through a forest canopy — use a CSS clip-path 
+  animation: clip-path goes from circle(0%) to circle(150%) 
+  over 800ms ease-in-out when triggered.
+
+==================================================
+STEP 2 — FALLING LEAVES + LOADING ANIMATION
+==================================================
+Create src/components/LeafLoader.jsx
+
+Falling leaves animation:
+- Generate 12 leaf shapes using SVG paths 
+  (simple 3-point leaf silhouettes, not emoji)
+- Each leaf: random size (16-32px), gold or green color, 
+  starts at random x position at top, falls to bottom 
+  with a gentle swaying CSS animation
+- Use @keyframes with transform: translateY + rotate + 
+  translateX(sin wave) to make them sway as they fall
+- Stagger animation-delay randomly per leaf (0 to 3s)
+- Loop infinitely
+
+Tree growing animation:
+- In the center, draw an SVG tree that "grows" on load
+- Start: just roots/stump visible
+- Use stroke-dashoffset animation on SVG paths to make 
+  the trunk and branches draw themselves over 2 seconds
+- Then fade in a circle of leaves (green filled circles) 
+  around the crown after trunk finishes drawing
+- Below the tree: "Analysing project..." text in gold, 
+  with the words cycling through:
+  "Fetching registry data..."
+  "Checking satellite imagery..."  
+  "Running AI scoring..."
+  "Building evidence trail..."
+  (change every 1.5s using setInterval)
+
+Show LeafLoader whenever a project score is loading.
+
+==================================================
+STEP 3 — GLOBAL STYLES (index.css)
+==================================================
+- body background: --green-deep
+- All cards: background #1a4023, border: 1px solid #c9a84c40,
+  border-radius: 12px
+- Gold borders on hover: border-color: #c9a84c
+- All headings: Playfair Display serif, gold color
+- All body text: 'DM Sans' (Google Font), --text-primary
+- Buttons: gold border, transparent bg, gold text, 
+  hover fills with gold, text turns dark
+- Scrollbar: thin, gold thumb on dark green track
+- Add gold shimmer animation class .gold-shimmer that 
+  animates background-position of a linear-gradient
+  for a subtle metallic sheen effect — apply to the 
+  main CanopyScore logo text
+
+==================================================
+STEP 4 — SCORE CARD RESKIN
+==================================================
+Restyle ScoreCard.jsx with the new theme:
+
+- Overall score circle: stroke in gold (#c9a84c), 
+  fill dark green, score number in gold Playfair Display
+- Score interpretation text below the number:
+  * 0-40: "High Risk" in red
+  * 41-70: "Moderate" in amber  
+  * 71-100: "Verified" in --green-glow
+- Sub-score bars: gold fill on dark green track
+- Risk flags: dark red background, gold-tinted text, 
+  left border 3px solid red
+- Evidence sources panel: each row has a small gold 
+  leaf bullet point, URLs in --green-glow color
+- Add a "Powered by Verra Registry + Sentinel-2" 
+  badge at the bottom in small muted text
+
+==================================================
+STEP 5 — NAVBAR
+==================================================
+Create src/components/Navbar.jsx:
+- Fixed top, full width
+- Background: #0a1f0e with 1px bottom border in #c9a84c40
+- Left: leaf SVG icon + "CanopyScore" in Playfair Display gold
+- Right: "Search Projects" link + "About" link
+- On scroll down: add backdrop-filter: blur(10px) 
+  and slightly increase border opacity
+
+Add this Navbar to App.jsx above all routes.
+
+==================================================
+Add both Google Fonts to index.html:
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+==================================================

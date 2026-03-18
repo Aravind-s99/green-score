@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 function clamp0to100(n) {
@@ -34,6 +34,13 @@ export default function Home() {
   const [cards, setCards] = useState([])
   const [featuredError, setFeaturedError] = useState(null)
   const [loadingFeatured, setLoadingFeatured] = useState(true)
+
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggLoading, setSuggLoading] = useState(false)
+  const suggTimer = useRef(null)
+  const inputRef = useRef(null)
+  const dropdownRef = useRef(null)
 
   const normalizedQuery = useMemo(() => query.trim(), [query])
 
@@ -77,9 +84,46 @@ export default function Home() {
     }
   }, [])
 
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+        inputRef.current && !inputRef.current.contains(e.target)
+      ) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  function onQueryChange(e) {
+    const val = e.target.value
+    setQuery(val)
+    clearTimeout(suggTimer.current)
+    if (val.trim().length < 2) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    setSuggLoading(true)
+    suggTimer.current = setTimeout(async () => {
+      try {
+        const data = await apiJson(`/api/search?q=${encodeURIComponent(val.trim())}&registry=verra`)
+        setSuggestions(Array.isArray(data) ? data.slice(0, 8) : [])
+        setShowSuggestions(true)
+      } catch {
+        setSuggestions([])
+      } finally {
+        setSuggLoading(false)
+      }
+    }, 300)
+  }
+
   function onSubmit(e) {
     e.preventDefault()
     if (!normalizedQuery) return
+    setShowSuggestions(false)
     navigate(`/search?q=${encodeURIComponent(normalizedQuery)}`)
   }
 
@@ -95,12 +139,55 @@ export default function Home() {
           </p>
 
           <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search project name, ID, country, methodology…"
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-            />
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={onQueryChange}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                placeholder="Search project name, ID, country, methodology…"
+                autoComplete="off"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              />
+              {suggLoading && (
+                <div className="absolute right-3 top-3.5">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+                </div>
+              )}
+              {showSuggestions && suggestions.length > 0 && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute z-50 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden"
+                >
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.project_id}
+                      type="button"
+                      onMouseDown={() => {
+                        setShowSuggestions(false)
+                        navigate(`/score/${encodeURIComponent(s.project_id)}`)
+                      }}
+                      className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-900 truncate">{s.name}</div>
+                        <div className="flex gap-2 mt-0.5">
+                          {s.country && <span className="text-xs text-slate-500">{s.country}</span>}
+                          {s.methodology && <span className="text-xs text-emerald-600 truncate max-w-[160px]">{s.methodology}</span>}
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-400 shrink-0">VCS {s.project_id}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="submit"
+                    className="w-full px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 text-center transition border-t border-slate-100"
+                  >
+                    See all results for "{query}" →
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               type="submit"
               disabled={!normalizedQuery}

@@ -1,0 +1,58 @@
+Failed to load resource: net::ERR_BLOCKED_BY_CLIENTUnderstand this error
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENTUnderstand this error
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENTUnderstand this error
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Adbd38c5c&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=9b695373-b6aa-4d27-8596-f1d173ba71e2:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENTUnderstand this error
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Adbd38c5c&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=dd1d3f62-8805-4d24-88a6-1cc9d448eba4:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENTUnderstand this error
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENTUnderstand this error
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENTUnderstand this error
+shared-bf556046ef51b324197928d98cd2003e.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-bf556046ef51b324197928d98cd2003e.js:1:242982Understand this error
+8b6d49bff3a7bfd1.js:21  POST https://events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ 8b6d49bff3a7bfd1.js:21
+(anonymous) @ 8b6d49bff3a7bfd1.js:21
+(anonymous) @ 90aaefbf5a5c60b5.js:2
+o @ 90aaefbf5a5c60b5.js:2
+promise @ 63a2d9b1812e2578.js:2
+(anonymous) @ 63a2d9b1812e2578.js:2
+n.httpRequest @ 63a2d9b1812e2578.js:2
+t @ 63a2d9b1812e2578.js:2
+a.sendChunk @ 63a2d9b1812e2578.js:2
+a.sendEvents @ 63a2d9b1812e2578.js:2
+a.flush @ 63a2d9b1812e2578.js:2
+e @ 63a2d9b1812e2578.js:2
+r @ 8b6d49bff3a7bfd1.js:21Understand this error
+8b6d49bff3a7bfd1.js:21  POST https://events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ 8b6d49bff3a7bfd1.js:21
+(anonymous) @ 8b6d49bff3a7bfd1.js:21
+(anonymous) @ 90aaefbf5a5c60b5.js:2
+o @ 90aaefbf5a5c60b5.js:2
+promise @ 63a2d9b1812e2578.js:2
+(anonymous) @ 63a2d9b1812e2578.js:2
+n.httpRequest @ 63a2d9b1812e2578.js:2
+t @ 63a2d9b1812e2578.js:2
+(anonymous) @ 63a2d9b1812e2578.js:2
+Promise.catch
+t @ 63a2d9b1812e2578.js:2
+a.sendChunk @ 63a2d9b1812e2578.js:2
+a.sendEvents @ 63a2d9b1812e2578.js:2
+a.flush @ 63a2d9b1812e2578.js:2
+e @ 63a2d9b1812e2578.js:2
+r @ 8b6d49bff3a7bfd1.js:21Understand this error
+8b6d49bff3a7bfd1.js:21  POST https://logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Adbd38c5c&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=210866d6-996e-4dad-b2d1-9bd3a573d83b net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ 8b6d49bff3a7bfd1.js:21
+(anonymous) @ 90aaefbf5a5c60b5.js:2
+o @ 90aaefbf5a5c60b5.js:2
+a @ 90aaefbf5a5c60b5.js:2
+v @ 90aaefbf5a5c60b5.js:2
+p @ 90aaefbf5a5c60b5.js:2
+send @ 90aaefbf5a5c60b5.js:2
+t.flush @ 90aaefbf5a5c60b5.js:2
+(anonymous) @ 90aaefbf5a5c60b5.js:2
+(anonymous) @ 90aaefbf5a5c60b5.js:2
+t.notify @ 90aaefbf5a5c60b5.js:2
+f @ 90aaefbf5a5c60b5.js:2
+(anonymous) @ 90aaefbf5a5c60b5.js:2
+f @ 90aaefbf5a5c60b5.js:2
+(anonymous) @ 90aaefbf5a5c60b5.js:2
+r @ 8b6d49bff3a7bfd1.js:21Understand this error
+8b6d49bff3a7bfd1.js:21  POST https://logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Adbd38c5c&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=62b05a90-9f1f-4d85-aa9c-7d8e89808c50 net::ERR_BLOCKED_BY_CLIENT

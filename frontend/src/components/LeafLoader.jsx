@@ -19,17 +19,18 @@ function Leaf({ idx }) {
       width={size}
       height={size}
       viewBox="0 0 24 24"
+      className="canopy-leaf"
       style={{
         position: 'absolute',
         left: `${left}%`,
         top: 0,
         animation: `leaf-fall ${duration}s ${delay}s ease-in-out infinite`,
-        opacity: 0,
+        pointerEvents: 'none',
       }}
     >
       <path
         d="M12 2C8 2 4 6 4 11c0 2.5 1 4.5 3 6l5-7 5 7c2-1.5 3-3.5 3-6 0-5-4-9-8-9z"
-        fill={gold ? '#c9a84c' : '#2d7a3a'}
+        fill={gold ? '#c9a84c' : '#133b1a'}
         opacity="0.85"
       />
     </svg>

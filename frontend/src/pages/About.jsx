@@ -441,7 +441,7 @@ export default function About() {
           fontStyle: 'italic',
           margin: 0,
         }}>
-          — Aravind
+          
         </p>
       </section>
     </main>

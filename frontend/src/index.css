@@ -63,17 +63,20 @@ h1, h2, h3, h4 {
 ::-webkit-scrollbar-track { background: var(--green-mid); }
 ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
 
-@keyframes gold-shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
+@keyframes leaves-inside {
+  0%, 100%   { background-position: 0% center, 0% center, 0% center; }
+  50%        { background-position: 150% center, 150% center, 150% center; }
 }
-.gold-shimmer {
-  background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 40%, var(--gold) 60%, var(--gold-light) 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gold-shimmer 3s linear infinite;
+
+.leaves-inside-text {
+  animation: leaves-inside 4s ease-in-out infinite;
+  background-image: 
+    radial-gradient(circle at 10% 30%, #2d7a3a 2px, transparent 2px),
+    radial-gradient(circle at 25% 60%, #2d7a3a 1.5px, transparent 1.5px),
+    radial-gradient(circle at 40% 40%, #2d7a3a 2px, transparent 2px);
+  background-size: 200% 100%, 200% 100%, 200% 100%;
+  background-position: 0% center, 0% center, 0% center;
+  background-repeat: repeat-x;
 }
 
 @keyframes bounce-down {
@@ -89,6 +92,7 @@ h1, h2, h3, h4 {
   90%  { opacity: 1; }
   100% { transform: translateY(110vh) rotate(360deg) translateX(-20px); opacity: 0; }
 }
+.canopy-leaf { z-index: 10; }
 
 @keyframes draw-path {
   from { stroke-dashoffset: 1; }
@@ -118,4 +122,8 @@ h1, h2, h3, h4 {
 @keyframes pulse-down {
   0%, 100% { opacity: 1; transform: translateY(0); }
   50% { opacity: 0.6; transform: translateY(4px); }
+}
+input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
 }

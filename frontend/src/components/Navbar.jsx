@@ -43,11 +43,16 @@ export default function Navbar() {
     }}>
       <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <LeafIcon size={22} />
-        <span className="gold-shimmer" style={{
+        <span className="leaves-inside-text" style={{
           fontFamily: "'Playfair Display', serif",
           fontSize: '20px',
           fontWeight: 700,
           letterSpacing: '0.03em',
+          background: 'linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 40%, var(--gold) 60%, var(--gold-light) 100%)',
+          backgroundSize: '200% 100%',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
         }}>
           CanopyScore
         </span>

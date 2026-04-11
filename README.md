@@ -60,11 +60,6 @@ Measures how easy it is for an external reviewer to validate the project.
 ## Overall score
 The overall Green Score is a **weighted average** of the four sub-scores. Weights are chosen to prioritize verifiability and consistency across independent sources.
 
-## Evidence sources (credibility requirement)
-Every response must include `evidence_sources[]` entries with:
 
-- `name`: the dataset or registry name
-- `url`: a concrete URL the user can click
-- `fetched_at`: an ISO timestamp of when the data was retrieved
 
 This is the authenticity proof that allows users to audit the score.
